@@ -6,12 +6,12 @@ export function getSupabase() {
   if (!supabaseClient) {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
+
     if (!supabaseUrl || !supabaseAnonKey) {
       console.warn("Supabase credentials missing. Database features will be disabled.");
       return null;
     }
-    
+
     supabaseClient = createClient(supabaseUrl, supabaseAnonKey);
   }
   return supabaseClient;
@@ -33,7 +33,7 @@ export async function saveMetricsSnapshot(repoName: string, metrics: any) {
     ]);
 
   if (error) {
-    console.error("Supabase insert error:", error);
+    console.warn("Supabase insert warning (ignoring for now):", error.message || error);
     return null;
   }
   return data;

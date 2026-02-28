@@ -7,20 +7,21 @@ import { calculateMetrics, DevOpsMetrics } from "@/lib/metrics";
 import { generateDevOpsInsights } from "@/lib/ai";
 import { saveMetricsSnapshot } from "@/lib/supabase";
 import { DevOpsCharts } from "@/components/DevOpsCharts";
-import { 
-  BarChart3, 
-  Github, 
-  LayoutDashboard, 
-  LogOut, 
-  RefreshCw, 
-  Search, 
-  ShieldAlert, 
-  ShieldCheck, 
+import {
+  BarChart3,
+  Github,
+  LayoutDashboard,
+  LogOut,
+  RefreshCw,
+  Search,
+  ShieldAlert,
+  ShieldCheck,
   Zap,
   Loader2,
   ChevronRight
 } from "lucide-react";
 import Markdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 export default function Dashboard() {
   const { data: session, status } = useSession();
@@ -41,27 +42,27 @@ export default function Dashboard() {
 
   const analyzeRepo = async (repoFullName: string) => {
     if (!session?.accessToken) return;
-    
+
     setLoading(true);
     setError(null);
     setSelectedRepo(repoFullName);
-    
+
     try {
       const [owner, repo] = repoFullName.split("/");
       const rawData = await fetchRepoMetrics(session.accessToken as string, owner, repo);
       const computedMetrics = calculateMetrics(rawData);
       setMetrics(computedMetrics);
-      
+
       const aiInsights = await generateDevOpsInsights(repoFullName, computedMetrics);
       setInsights(aiInsights || null);
-      
+
       // Save to Supabase (optional, handle errors silently for now)
       try {
         await saveMetricsSnapshot(repoFullName, computedMetrics);
       } catch (e) {
         console.error("Supabase save error:", e);
       }
-      
+
     } catch (err) {
       console.error(err);
       setError("Analysis failed. Please check repository permissions.");
@@ -130,7 +131,7 @@ export default function Dashboard() {
 
       <main className="max-w-7xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          
+
           {/* Repository List */}
           <div className="lg:col-span-4 space-y-6">
             <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100">
@@ -143,12 +144,12 @@ export default function Dashboard() {
                   {repos.length}
                 </span>
               </div>
-              
+
               <div className="relative mb-4">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Search repos..." 
+                <input
+                  type="text"
+                  placeholder="Search repos..."
                   className="w-full pl-10 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition-all"
                 />
               </div>
@@ -159,11 +160,10 @@ export default function Dashboard() {
                     key={repo.id}
                     onClick={() => analyzeRepo(repo.full_name)}
                     disabled={loading}
-                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between group ${
-                      selectedRepo === repo.full_name 
-                        ? "bg-indigo-50 border-indigo-200 text-indigo-700" 
+                    className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between group ${selectedRepo === repo.full_name
+                        ? "bg-indigo-50 border-indigo-200 text-indigo-700"
                         : "bg-white border-transparent hover:border-slate-200 hover:bg-slate-50"
-                    }`}
+                      }`}
                   >
                     <div className="truncate">
                       <p className="font-semibold text-sm truncate">{repo.name}</p>
@@ -188,7 +188,7 @@ export default function Dashboard() {
               </div>
             ) : metrics ? (
               <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-                
+
                 {/* Health Score & Warning */}
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="md:col-span-2 bg-indigo-600 rounded-2xl p-8 text-white shadow-lg shadow-indigo-200 relative overflow-hidden">
@@ -205,11 +205,10 @@ export default function Dashboard() {
                     <Zap className="absolute -right-8 -bottom-8 w-48 h-48 text-white/10 rotate-12" />
                   </div>
 
-                  <div className={`rounded-2xl p-8 flex flex-col justify-center items-center text-center border-2 ${
-                    metrics.successRate < 70 
-                      ? "bg-red-50 border-red-100 text-red-700" 
+                  <div className={`rounded-2xl p-8 flex flex-col justify-center items-center text-center border-2 ${metrics.successRate < 70
+                      ? "bg-red-50 border-red-100 text-red-700"
                       : "bg-green-50 border-green-100 text-green-700"
-                  }`}>
+                    }`}>
                     {metrics.successRate < 70 ? (
                       <>
                         <ShieldAlert className="w-12 h-12 mb-4" />
@@ -254,7 +253,7 @@ export default function Dashboard() {
                     </div>
                     <div className="p-8 prose prose-slate max-w-none">
                       <div className="markdown-body">
-                        <Markdown>{insights}</Markdown>
+                        <Markdown remarkPlugins={[remarkGfm]}>{insights}</Markdown>
                       </div>
                     </div>
                   </div>
