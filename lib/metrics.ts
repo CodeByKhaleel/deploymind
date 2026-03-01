@@ -15,7 +15,7 @@ export interface DevOpsMetrics {
 }
 
 export function calculateMetrics(data: any): DevOpsMetrics {
-  const { workflowRuns, pullRequests, commits } = data;
+  const { workflowRuns, pullRequests } = data;
 
   // 1. Deployment Frequency (using workflow runs as proxy for deployments)
   const runsByWeek: Record<string, number> = {};

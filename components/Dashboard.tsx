@@ -30,6 +30,7 @@ export default function Dashboard() {
   const [metrics, setMetrics] = useState<DevOpsMetrics | null>(null);
   const [insights, setInsights] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [loadingInsights, setLoadingInsights] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const activeAnalysisId = useRef(0);
 
@@ -57,12 +58,24 @@ export default function Dashboard() {
       if (analysisId !== activeAnalysisId.current) return;
 
       setMetrics(computedMetrics);
+      setLoading(false); // Metrics are ready, stop main loading
+      setLoadingInsights(true);
 
-      const aiInsights = await generateDevOpsInsights(repoFullName, computedMetrics);
-
-      if (analysisId !== activeAnalysisId.current) return;
-
-      setInsights(aiInsights || null);
+      try {
+        const aiInsights = await generateDevOpsInsights(repoFullName, computedMetrics);
+        if (analysisId === activeAnalysisId.current) {
+          setInsights(aiInsights || null);
+        }
+      } catch (e) {
+        console.error("AI Insight generation failed:", e);
+        if (analysisId === activeAnalysisId.current) {
+          setInsights("Failed to generate AI insights.");
+        }
+      } finally {
+        if (analysisId === activeAnalysisId.current) {
+          setLoadingInsights(false);
+        }
+      }
 
       // Save to Supabase (optional, handle errors silently for now)
       try {
@@ -76,10 +89,7 @@ export default function Dashboard() {
 
       console.error(err);
       setError("Analysis failed. Please check repository permissions.");
-    } finally {
-      if (analysisId === activeAnalysisId.current) {
-        setLoading(false);
-      }
+      setLoading(false);
     }
   };
 
@@ -256,19 +266,26 @@ export default function Dashboard() {
                 <DevOpsCharts metrics={metrics} />
 
                 {/* AI Insights */}
-                {insights && (
-                  <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-                    <div className="bg-slate-900 p-4 flex items-center gap-2 text-white">
-                      <Zap className="w-4 h-4 text-yellow-400 fill-yellow-400" />
-                      <h3 className="font-bold text-sm tracking-wide uppercase">AI-Powered Insights</h3>
-                    </div>
-                    <div className="p-8 prose prose-slate max-w-none">
+                <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
+                  <div className="bg-slate-900 p-4 flex items-center gap-2 text-white">
+                    <Zap className="w-4 h-4 text-yellow-400 fill-yellow-400" />
+                    <h3 className="font-bold text-sm tracking-wide uppercase">AI-Powered Insights</h3>
+                  </div>
+                  <div className="p-8 prose prose-slate max-w-none">
+                    {loadingInsights ? (
+                      <div className="flex flex-col items-center justify-center space-y-4 py-8">
+                        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+                        <p className="text-slate-500 font-medium">Generating AI Insights...</p>
+                      </div>
+                    ) : insights ? (
                       <div className="markdown-body">
                         <Markdown remarkPlugins={[remarkGfm]}>{insights}</Markdown>
                       </div>
-                    </div>
+                    ) : (
+                      <p className="text-slate-500">No insights available.</p>
+                    )}
                   </div>
-                )}
+                </div>
               </div>
             ) : (
               <div className="bg-white rounded-2xl p-12 flex flex-col items-center justify-center text-center space-y-6 border border-slate-100 shadow-sm">

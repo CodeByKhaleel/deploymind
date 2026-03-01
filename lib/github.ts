@@ -16,7 +16,7 @@ export async function fetchUserRepos(accessToken: string) {
 export async function fetchRepoMetrics(accessToken: string, owner: string, repo: string) {
   const octokit = getOctokit(accessToken);
 
-  const [{ data: workflowRuns }, { data: pullRequests }, { data: commits }] = await Promise.all([
+  const [{ data: workflowRuns }, { data: pullRequests }] = await Promise.all([
     octokit.rest.actions.listWorkflowRunsForRepo({
       owner,
       repo,
@@ -28,16 +28,10 @@ export async function fetchRepoMetrics(accessToken: string, owner: string, repo:
       state: "all",
       per_page: 50,
     }),
-    octokit.rest.repos.listCommits({
-      owner,
-      repo,
-      per_page: 50,
-    }),
   ]);
 
   return {
     workflowRuns: workflowRuns.workflow_runs,
     pullRequests,
-    commits,
   };
 }
