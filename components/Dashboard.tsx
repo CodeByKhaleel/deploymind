@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useSession, signIn, signOut } from "next-auth/react";
 import { fetchUserRepos, fetchRepoMetrics } from "@/lib/github";
 import { calculateMetrics, DevOpsMetrics } from "@/lib/metrics";
@@ -31,6 +31,7 @@ export default function Dashboard() {
   const [insights, setInsights] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const activeAnalysisId = useRef(0);
 
   useEffect(() => {
     if (session?.accessToken) {
@@ -43,6 +44,7 @@ export default function Dashboard() {
   const analyzeRepo = async (repoFullName: string) => {
     if (!session?.accessToken) return;
 
+    const analysisId = ++activeAnalysisId.current;
     setLoading(true);
     setError(null);
     setSelectedRepo(repoFullName);
@@ -51,9 +53,15 @@ export default function Dashboard() {
       const [owner, repo] = repoFullName.split("/");
       const rawData = await fetchRepoMetrics(session.accessToken as string, owner, repo);
       const computedMetrics = calculateMetrics(rawData);
+
+      if (analysisId !== activeAnalysisId.current) return;
+
       setMetrics(computedMetrics);
 
       const aiInsights = await generateDevOpsInsights(repoFullName, computedMetrics);
+
+      if (analysisId !== activeAnalysisId.current) return;
+
       setInsights(aiInsights || null);
 
       // Save to Supabase (optional, handle errors silently for now)
@@ -64,10 +72,14 @@ export default function Dashboard() {
       }
 
     } catch (err) {
+      if (analysisId !== activeAnalysisId.current) return;
+
       console.error(err);
       setError("Analysis failed. Please check repository permissions.");
     } finally {
-      setLoading(false);
+      if (analysisId === activeAnalysisId.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -159,7 +171,6 @@ export default function Dashboard() {
                   <button
                     key={repo.id}
                     onClick={() => analyzeRepo(repo.full_name)}
-                    disabled={loading}
                     className={`w-full text-left p-3 rounded-xl border transition-all flex items-center justify-between group ${selectedRepo === repo.full_name
                         ? "bg-indigo-50 border-indigo-200 text-indigo-700"
                         : "bg-white border-transparent hover:border-slate-200 hover:bg-slate-50"
